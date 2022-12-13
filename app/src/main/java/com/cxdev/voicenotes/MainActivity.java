@@ -1,20 +1,29 @@
 package com.cxdev.voicenotes;
 
+import static android.content.ContentValues.TAG;
+
+import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 1;
     private boolean permissionToRecordGranted = false;
 
-    private static final int SAMPLE_RATE = 44100;
+    private static final int SAMPLE_RATE = 22000;
     private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO;
     private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
     private static final int BUFFER_SIZE = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
@@ -47,13 +56,29 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT, BUFFER_SIZE);
-
-        try {
-            speechRecognizer = new SpeechRecognizer(this,this);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            // If the permission is not granted, request it
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 1);
         }
+
+        // Initialize the AudioRecord instance
+        audioRecord = new AudioRecord(
+                MediaRecorder.AudioSource.DEFAULT,
+                SAMPLE_RATE,
+                CHANNEL_CONFIG,
+                AUDIO_FORMAT,
+                BUFFER_SIZE
+        );
+
+        SpeechListener speechListener = new SpeechListener() {
+            @Override
+            public void onSpeechRecognized(String recognizedText, boolean isFinal) {
+                Log.i(TAG, recognizedText);
+            }
+        };
+
+        speechRecognizer = new SpeechRecognizer();
+
 
         // listener for history button
         findViewById(R.id.history).setOnClickListener(new View.OnClickListener() {
@@ -100,8 +125,6 @@ public class MainActivity extends AppCompatActivity {
                 showTitleDialog(MainActivity.this);
             }
         });
-
-
     }
 
     // start timer
